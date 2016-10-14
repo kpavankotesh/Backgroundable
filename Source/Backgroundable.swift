@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 
 //MARK: - Main
@@ -15,33 +15,32 @@ import UIKit
      
      - param    toBackground    lets its host object know if the app is moving to the background or coming from it
      */
-    func handleAppStateChange(_ toBackground: Bool)
+    func handleAppStateChange(toBackground: Bool)
     /**
      This method is called by `NSNotificationCenter` to let the object know the app is changing states. 
      
      - note You shouldn't need to implement this method, nor override it.
      */
-    @objc func handleAppState(_ notification: Notification)
+    @objc func handleAppState(notification: Notification)
 }
 
 extension AppStatesHandler
 {
     final func becomeAppStatesHandler() {
-        let notificationCenter = NotificationCenter.default
+        let notificationCenter = NSNotificationCenter.defaultCenter()
         notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: NSNotification.Name.UIApplicationWillResignActive, object: UIApplication.shared)
         notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: NSNotification.Name.UIApplicationDidBecomeActive, object: UIApplication.shared)
     }
     
     final func resignAppStatesHandler() {
-        let notificationCenter = NotificationCenter.default
-        notificationCenter.removeObserver(self, name: NSNotification.Name.UIApplicationWillResignActive, object: UIApplication.shared)
+        let notificationCenter = NSNotificationCenter.defaultCenter().removeObserver(self, name: NSNotification.Name.UIApplicationWillResignActive, object: UIApplication.shared)
         notificationCenter.removeObserver(self, name: NSNotification.Name.UIApplicationDidBecomeActive, object: UIApplication.shared)
     }
 }
 
 extension NSObject: AppStatesHandler
 {
-    @objc final func handleAppState(_ notification: Notification) {
+    @objc final func handleAppState(notification: Notification) {
         if notification.name == NSNotification.Name.UIApplicationWillResignActive {
             self.handleAppStateChange(true)
         } else if notification.name == NSNotification.Name.UIApplicationDidBecomeActive {
@@ -49,7 +48,7 @@ extension NSObject: AppStatesHandler
         }
     }
     
-    func handleAppStateChange(_ toBackground: Bool) {
+    func handleAppStateChange(toBackground: Bool) {
         
     }
 }
@@ -63,7 +62,7 @@ protocol Visibility: AppStatesHandler
     /**
      Informs callers if the app is currently in the foreground or not.
      */
-    var isVisible: Bool { get set }
+    var visible: Bool { get set }
     /**
      Called immediately before changing visibility.
      
@@ -83,9 +82,9 @@ protocol Visibility: AppStatesHandler
 //MARK: Background Task IDs
 
 private struct BackgroundTask {
-    @nonobjc fileprivate static var id = UIBackgroundTaskInvalid
+    @nonobjc private static var id = UIBackgroundTaskInvalid
     
-    fileprivate static var active: Bool  = false {
+    private static var active: Bool  = false {
         didSet {
             if oldValue != active {
                 if active {
@@ -151,7 +150,7 @@ struct Background {
      
      - param    operations  An array of `Operation` objects to be executed.
      */
-    static func enqueue(_ operations: [Operation])
+    static func enqueue(operations: [Operation])
     {
         if operations.isEmpty {
             return
@@ -201,7 +200,7 @@ struct Background {
  
  - param    x   The closure to be executed in the background.
  */
-public func inTheBackground(_ x: @escaping () -> Void)
+public func inTheBackground(x: () -> Void)
 {
     Background.enqueue([BlockOperation(block: x)])
 }
@@ -211,9 +210,9 @@ public func inTheBackground(_ x: @escaping () -> Void)
  
  - param    x   The closure to be executed on the main thread.
  */
-public func onTheMainThread(_ x: @escaping () -> Void)
+public func onTheMainThread(x: () -> Void)
 {
-    DispatchQueue.main.async {
+    dispatch_async(dispatch_get_main_queue()) {
         x()
     }
 }
