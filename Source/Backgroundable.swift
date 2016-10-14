@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 
 
 //MARK: - Main
@@ -21,29 +21,30 @@ import Foundation
      
      - note You shouldn't need to implement this method, nor override it.
      */
-    @objc func handleAppState(notification: Notification)
+    @objc func handleAppState(notification: NSNotification)
 }
 
 extension AppStatesHandler
 {
     final func becomeAppStatesHandler() {
         let notificationCenter = NSNotificationCenter.defaultCenter()
-        notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: NSNotification.Name.UIApplicationWillResignActive, object: UIApplication.shared)
-        notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: NSNotification.Name.UIApplicationDidBecomeActive, object: UIApplication.shared)
+        notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: UIApplicationWillResignActiveNotification, object: UIApplication.sharedApplication())
+        notificationCenter.addObserver(self, selector: #selector(AppStatesHandler.handleAppState(_:)), name: UIApplicationDidBecomeActiveNotification, object: UIApplication.sharedApplication())
     }
     
     final func resignAppStatesHandler() {
-        let notificationCenter = NSNotificationCenter.defaultCenter().removeObserver(self, name: NSNotification.Name.UIApplicationWillResignActive, object: UIApplication.shared)
-        notificationCenter.removeObserver(self, name: NSNotification.Name.UIApplicationDidBecomeActive, object: UIApplication.shared)
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.removeObserver(self, name: UIApplicationWillResignActiveNotification, object: UIApplication.sharedApplication())
+        notificationCenter.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: UIApplication.sharedApplication())
     }
 }
 
 extension NSObject: AppStatesHandler
 {
-    @objc final func handleAppState(notification: Notification) {
-        if notification.name == NSNotification.Name.UIApplicationWillResignActive {
+    @objc final func handleAppState(notification: NSNotification) {
+        if notification.name == UIApplicationWillResignActiveNotification {
             self.handleAppStateChange(true)
-        } else if notification.name == NSNotification.Name.UIApplicationDidBecomeActive {
+        } else if notification.name == UIApplicationDidBecomeActiveNotification {
             self.handleAppStateChange(false)
         }
     }
@@ -98,18 +99,18 @@ private struct BackgroundTask {
     
     private static func startBackgroundTask() {
         self.endBackgroundTask()
-        self.id = UIApplication.shared.beginBackgroundTask (expirationHandler: { () -> Void in
+        self.id = UIApplication.sharedApplication().beginBackgroundTaskWithExpirationHandler { () -> Void in
             if self.active {
                 self.startBackgroundTask()
             }
-        })
+        }
     }
     
     private static func endBackgroundTask() {
         if self.id == UIBackgroundTaskInvalid {
             return
         }
-        UIApplication.shared.endBackgroundTask(self.id)
+        UIApplication.sharedApplication().endBackgroundTask(self.id)
         self.id = UIBackgroundTaskInvalid
     }
 }
@@ -142,7 +143,7 @@ struct Background {
         }
     }
     
-    private static var concurrentQueue: OperationQueue!
+    private static var concurrentQueue: NSOperationQueue!
     private static var operationCount = 0
     
     /**
@@ -150,14 +151,14 @@ struct Background {
      
      - param    operations  An array of `Operation` objects to be executed.
      */
-    static func enqueue(operations: [Operation])
+    static func enqueue(operations: [NSOperation])
     {
         if operations.isEmpty {
             return
         }
         
         if Background.concurrentQueue == nil {
-            let queue = OperationQueue()
+            let queue = NSOperationQueue()
             queue.name = "BackgroundableQueue"
             Background.concurrentQueue = queue
         }
@@ -165,7 +166,7 @@ struct Background {
         
         startBackgroundTask()
         
-        for (index, item) in operations.enumerated() {
+        for (index, item) in operations.enumerate() {
             if index + 1 < operations.count {
                 item.addDependency(operations[index + 1])
             }
@@ -202,7 +203,7 @@ struct Background {
  */
 public func inTheBackground(x: () -> Void)
 {
-    Background.enqueue([BlockOperation(block: x)])
+    Background.enqueue([NSBlockOperation(block: x)])
 }
 
 /**
